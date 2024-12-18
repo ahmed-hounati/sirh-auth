@@ -1,27 +1,31 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Headers,
+  HttpException,
+  HttpStatus,
+  Post,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RoleMatchingMode, Roles } from 'nest-keycloak-connect';
-import { CreateUserDto } from './dto/CreateUser.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post()
+  @Post('login')
   login(@Body() info: string) {
-    console.log(info);
-
     return this.authService.login(info);
   }
 
-  @Post('admin')
-  amin() {
-    return this.authService.getAdminToken();
-  }
-
-  @Post('/create')
-  @Roles({ roles: ['admin'], mode: RoleMatchingMode.ALL })
-  register() {
-    return this.authService.register();
+  @Post('logout')
+  logout(@Headers('authorization') token: string): Promise<string> {
+    const refreshToken = token.split(' ')[1];
+    if (!refreshToken) {
+      throw new HttpException(
+        'Invalid authorization header format',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return this.authService.logout(refreshToken);
   }
 }
