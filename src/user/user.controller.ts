@@ -13,14 +13,15 @@ import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RoleMatchingMode, Roles } from 'nest-keycloak-connect';
+import { MessagePattern } from '@nestjs/microservices';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post('/create')
+  @MessagePattern({ cmd: 'create' })
   @Roles({ roles: ['admin'], mode: RoleMatchingMode.ALL })
-  async register(@Body() createUserDto: CreateUserDto) {
+  async register(createUserDto: CreateUserDto) {
     try {
       return await this.userService.create(createUserDto);
     } catch (error) {
@@ -32,5 +33,4 @@ export class UserController {
       throw new HttpException(message, status);
     }
   }
-
 }

@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import axios from 'axios';
+import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {
@@ -54,5 +55,61 @@ export class AuthService {
         error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  async getUserId(token: string): Promise<string> {
+    try {
+      // Fetch the Keycloak public keys
+      const jwksUri = `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/certs`;
+      const { data } = await axios.get(jwksUri);
+
+      console.log(token);
+      
+
+      // Decode the token header to find the key ID
+      const decodedHeader: any = jwt.decode(token);
+      const key = data.keys.find(
+        (k: any) => k.kid === decodedHeader.header.kid,
+      );
+
+      if (!key) {
+        throw new HttpException(
+          'Public key not found for the token',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      // Convert the key to PEM format
+      const publicKey = this.convertToPem(key.n, key.e);
+
+      // Verify the token using the public key
+      const decodedToken: any = jwt.verify(token, publicKey, {
+        algorithms: ['HS256'],
+        issuer: `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}`,
+      });
+
+      // Return the userId (sub claim)
+      return decodedToken.sub;
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Invalid or expired token',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+  }
+
+  private convertToPem(modulus: string, exponent: string): string {
+    const base64modulus = Buffer.from(modulus, 'base64');
+    const base64exponent = Buffer.from(exponent, 'base64');
+
+    const rsaKey = {
+      kty: 'RSA',
+      n: base64modulus,
+      e: base64exponent,
+    };
+
+    return `-----BEGIN PUBLIC KEY-----\n${Buffer.from(
+      JSON.stringify(rsaKey),
+    ).toString('base64')}\n-----END PUBLIC KEY-----`;
   }
 }

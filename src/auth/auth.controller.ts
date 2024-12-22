@@ -4,21 +4,21 @@ import {
   Headers,
   HttpException,
   HttpStatus,
-  Post,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { MessagePattern } from '@nestjs/microservices';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('login')
-  login(@Body() info: string) {
+  @MessagePattern({ cmd: 'login' })
+  login(info: string) {
     return this.authService.login(info);
   }
 
-  @Post('logout')
-  logout(@Headers('authorization') token: string): Promise<string> {
+  @MessagePattern({ cmd: 'logout' })
+  logout(token: string): Promise<string> {
     const refreshToken = token.split(' ')[1];
     if (!refreshToken) {
       throw new HttpException(
@@ -27,5 +27,11 @@ export class AuthController {
       );
     }
     return this.authService.logout(refreshToken);
+  }
+
+  @MessagePattern({ cmd: 'getUserId' })
+  getUserId(token: string): Promise<string> {
+    const refreshToken = token.split(' ')[1];
+    return this.authService.getUserId(refreshToken);
   }
 }

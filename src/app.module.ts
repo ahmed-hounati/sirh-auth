@@ -7,7 +7,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from './user/user.module';
 import * as process from 'node:process';
 import { User } from './user/entities/user.entity';
-import { Repository } from 'typeorm';
 
 @Module({
   imports: [
@@ -23,7 +22,7 @@ import { Repository } from 'typeorm';
       entities: [User],
       synchronize: true,
     }),
-    UserModule
+    UserModule,
   ],
   controllers: [AppController],
   providers: [AppService],
